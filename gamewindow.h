@@ -23,7 +23,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
-    // 移动物体结构
+
     struct MovingObject {
         int x, y;
         int size;
@@ -34,16 +34,25 @@ private:
         int health;
         int maxHealth;
         bool isDead;
+        bool isBoss;
 
         MovingObject() : x(0), y(0), size(0), speedX(0), speedY(0),
             imageIndex(-1), distance(0.0), health(100),
-            maxHealth(100), isDead(false) {}
+            maxHealth(100), isDead(false), isBoss(false) {}
     };
 
 
+    struct Bullet {
+        int x, y;
+        int speedX, speedY;
+        int size;
+        bool active;
+
+        Bullet() : x(0), y(0), speedX(0), speedY(0), size(8), active(false) {}
+    };
+
 
     void initGame();
-
 
     bool loadImages();
     void updateBackground();
@@ -67,9 +76,12 @@ private:
     void autoAttack();
     void handleCollisions();
     void checkObjectDeath();
-
-
     void checkAndUpgradeAttack();
+    void spawnBoss();
+    void updateBoss();
+    void updateBullets();
+    void bossShoot();
+    void checkVictory();
 
 
     void drawBackground(QPainter &painter);
@@ -80,9 +92,10 @@ private:
     void drawInfoPanel(QPainter &painter);
     void drawHealthBar(QPainter &painter, int x, int y, int width, int height,
                        int currentHealth, int maxHealth);
-
+    void drawBullets(QPainter &painter);
     void drawTextWithOutline(QPainter &painter, int x, int y, const QString &text,
                              const QColor &textColor, const QColor &outlineColor, int outlineWidth);
+
 
     int playerX, playerY;
     int playerSize;
@@ -92,23 +105,37 @@ private:
     int moveSpeed;
     float attackCooldown;
     float attackTimer;
+
+
     int killCount;
     int killsForUpgrade;
     int upgradeLevel;
     int attackBonus;
     int totalKills;
 
+
+    bool bossSpawned;
+    float bossSpawnTimer;
+    float bossSpawnDelay;
+    int bossIndex;
+    float bossShootTimer;
+    float bossShootDelay;
+    QVector<Bullet> bullets;
+    bool gameVictory;
+
+
     bool moveUp, moveDown, moveLeft, moveRight;
 
-
     bool showConnection;
-    bool showGrid;
     bool showHealthBars;
     float backgroundOpacity;
 
+private:
+
+
+    MovingObject* bossPointer;
 
     QVector<MovingObject> movingObjects;
-
     int nearestObjectIndex;
     double nearestDistance;
 
