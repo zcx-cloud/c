@@ -86,6 +86,7 @@ void GameWindow::initGame()
     upgradeLevel = 0;
     attackBonus = 0;
     totalKills = 0;
+    nextObjectId = 1;
 
     moveUp = false;
     moveDown = false;
@@ -104,7 +105,7 @@ void GameWindow::initGame()
     bossSpawnTimer = 0.0f;
     bossSpawnDelay = 30.0f;
     bossIndex = -1;
-    bossPointer = nullptr;
+    bossId = -1;
     bossShootTimer = 0.0f;
     bossShootDelay = 1.0f;
 
@@ -145,6 +146,7 @@ void GameWindow::addRandomObject()
     obj.isBoss = false;
     obj.imageIndex = randomInt(0, 1);
     obj.pixmap = objectImages[obj.imageIndex];
+    obj.objectId = nextObjectId++;
 
 
     if (obj.size >= 60) {
@@ -165,11 +167,8 @@ void GameWindow::addRandomObject()
                                        Qt::SmoothTransformation);
     }
 
-
     obj.x = randomInt(obj.size, width() - obj.size);
     obj.y = randomInt(obj.size, height() - obj.size);
-
-
     obj.speedX = getRandomSpeed();
     obj.speedY = getRandomSpeed();
 
@@ -195,6 +194,7 @@ void GameWindow::spawnBoss()
     boss.isDead = false;
     boss.imageIndex = 2;
     boss.pixmap = objectImages[2];
+    boss.objectId = nextObjectId++;
 
     if (!boss.pixmap.isNull()) {
         boss.pixmap = boss.pixmap.scaled(boss.size, boss.size,
@@ -202,17 +202,14 @@ void GameWindow::spawnBoss()
                                          Qt::SmoothTransformation);
     }
 
-
     boss.x = width() - 150;
     boss.y = 100;
-
-
     boss.speedX = 2;
     boss.speedY = 2;
 
     movingObjects.append(boss);
     bossIndex = movingObjects.size() - 1;
-    bossPointer = &movingObjects[bossIndex];
+    bossId = boss.objectId;
     bossSpawned = true;
 
 
@@ -221,73 +218,61 @@ void GameWindow::spawnBoss()
 void GameWindow::updateBoss()
 {
 
-    if (!bossSpawned || bossIndex < 0 || bossIndex >= movingObjects.size()) {
-        return;
-    }
-
-
-    if (bossPointer == nullptr || bossPointer->isBoss == false) {
-
-        for (int i = 0; i < movingObjects.size(); i++) {
-            if (movingObjects[i].isBoss) {
-                bossIndex = i;
-                bossPointer = &movingObjects[i];
-                break;
-            }
+    MovingObject* boss = nullptr;
+    for (int i = 0; i < movingObjects.size(); i++) {
+        if (movingObjects[i].isBoss && movingObjects[i].objectId == bossId) {
+            boss = &movingObjects[i];
+            bossIndex = i;
+            break;
         }
-        if (bossPointer == nullptr) return;
     }
 
-    MovingObject &boss = *bossPointer;
 
-
-    if (boss.isDead || boss.health <= 0) {
+    if (boss == nullptr || boss->isDead || boss->health <= 0) {
         return;
     }
 
 
-    int dx = playerX - boss.x;
-    int dy = playerY - boss.y;
-    double distanceToPlayer = calculateDistance(boss.x, boss.y, playerX, playerY);
+    int dx = playerX - boss->x;
+    int dy = playerY - boss->y;
+    double distanceToPlayer = calculateDistance(boss->x, boss->y, playerX, playerY);
 
     if (distanceToPlayer > 0) {
-
-        float healthPercent = (float)boss.health / boss.maxHealth;
+        float healthPercent = (float)boss->health / boss->maxHealth;
         float baseSpeed = 3.0f;
         float speedMultiplier = 1.0f + (1.0f - healthPercent) * 1.5f;
         float currentSpeed = baseSpeed * speedMultiplier;
 
+        boss->speedX = (dx / distanceToPlayer) * currentSpeed;
+        boss->speedY = (dy / distanceToPlayer) * currentSpeed;
 
-        boss.speedX = (dx / distanceToPlayer) * currentSpeed;
-        boss.speedY = (dy / distanceToPlayer) * currentSpeed;
-
-
-        boss.x += boss.speedX;
-        boss.y += boss.speedY;
+        boss->x += boss->speedX;
+        boss->y += boss->speedY;
 
 
-        if (boss.x < boss.size/2) {
-            boss.x = boss.size/2;
-            boss.speedX = abs(boss.speedX);
+        if (boss->x < boss->size/2) {
+            boss->x = boss->size/2;
+            boss->speedX = abs(boss->speedX);
         }
-        if (boss.x > width() - boss.size/2) {
-            boss.x = width() - boss.size/2;
-            boss.speedX = -abs(boss.speedX);
+        if (boss->x > width() - boss->size/2) {
+            boss->x = width() - boss->size/2;
+            boss->speedX = -abs(boss->speedX);
         }
-        if (boss.y < boss.size/2) {
-            boss.y = boss.size/2;
-            boss.speedY = abs(boss.speedY);
+        if (boss->y < boss->size/2) {
+            boss->y = boss->size/2;
+            boss->speedY = abs(boss->speedY);
         }
-        if (boss.y > height() - boss.size/2) {
-            boss.y = height() - boss.size/2;
-            boss.speedY = -abs(boss.speedY);
+        if (boss->y > height() - boss->size/2) {
+            boss->y = height() - boss->size/2;
+            boss->speedY = -abs(boss->speedY);
         }
     }
 
 
     if (bossShootTimer <= 0) {
         bossShoot();
-        float healthPercent = (float)boss.health / boss.maxHealth;
+
+        float healthPercent = (float)boss->health / boss->maxHealth;
         if (healthPercent < 0.3f) {
             bossShootDelay = 0.5f;
         } else if (healthPercent < 0.6f) {
@@ -304,19 +289,22 @@ void GameWindow::updateBoss()
 
 void GameWindow::bossShoot()
 {
-    if (!bossSpawned || bossPointer == nullptr) return;
 
-    MovingObject &boss = *bossPointer;
-    if (boss.isDead || boss.health <= 0) return;
-
-
-    int dx = playerX - boss.x;
-    int dy = playerY - boss.y;
-    double distance = calculateDistance(boss.x, boss.y, playerX, playerY);
+    MovingObject* boss = nullptr;
+    for (int i = 0; i < movingObjects.size(); i++) {
+        if (movingObjects[i].isBoss && movingObjects[i].objectId == bossId) {
+            boss = &movingObjects[i];
+            break;
+        }
+    }
+    if (boss == nullptr || boss->isDead || boss->health <= 0) return;
+    int dx = playerX - boss->x;
+    int dy = playerY - boss->y;
+    double distance = calculateDistance(boss->x, boss->y, playerX, playerY);
 
     if (distance > 0) {
         float speed = 6.0f;
-        float healthPercent = (float)boss.health / boss.maxHealth;
+        float healthPercent = (float)boss->health / boss->maxHealth;
         int bulletCount = 1;
 
         if (healthPercent < 0.3f) {
@@ -325,14 +313,13 @@ void GameWindow::bossShoot()
             bulletCount = 3;
         }
 
-
         int speedX = (dx / distance) * speed;
         int speedY = (dy / distance) * speed;
 
         for (int i = 0; i < bulletCount; i++) {
             Bullet bullet;
-            bullet.x = boss.x;
-            bullet.y = boss.y;
+            bullet.x = boss->x;
+            bullet.y = boss->y;
             bullet.size = (i == 0) ? 10 : 8;
             bullet.active = true;
 
@@ -350,12 +337,11 @@ void GameWindow::bossShoot()
             bullets.append(bullet);
         }
 
-
         if (healthPercent < 0.3f) {
             for (int i = 0; i < 8; i++) {
                 Bullet ringBullet;
-                ringBullet.x = boss.x;
-                ringBullet.y = boss.y;
+                ringBullet.x = boss->x;
+                ringBullet.y = boss->y;
                 ringBullet.size = 6;
                 ringBullet.active = true;
 
@@ -487,7 +473,8 @@ void GameWindow::checkObjectDeath()
 
             if (movingObjects[i].isBoss) {
 
-                bossPointer = nullptr;
+                bossSpawned = false;  // 标记Boss已不存在
+                bossId = -1;
                 bossIndex = -1;
             }
 
@@ -498,18 +485,7 @@ void GameWindow::checkObjectDeath()
     }
 
 
-    if (bossSpawned && (bossPointer == nullptr || bossIndex == -1)) {
-        for (int i = 0; i < movingObjects.size(); i++) {
-            if (movingObjects[i].isBoss) {
-                bossIndex = i;
-                bossPointer = &movingObjects[i];
-                break;
-            }
-        }
-    }
-
-
-    if (!bossSpawned && movingObjects.size() < 5) {
+    if (!bossSpawned && movingObjects.size() < 5 && !gameVictory) {
         int addCount = 2 + upgradeLevel / 3;
         for (int i = 0; i < addCount; i++) {
             addRandomObject();
@@ -846,28 +822,39 @@ void GameWindow::drawInfoPanel(QPainter &painter)
     drawTextWithOutline(painter, 15, yPos, QString("等级: %1").arg(upgradeLevel), Qt::white, Qt::black, 1);
     yPos += lineHeight;
 
-    if (bossSpawned && bossPointer != nullptr && !bossPointer->isDead) {
-        drawTextWithOutline(painter, 15, yPos, "=== Boss状态 ===", Qt::red, Qt::black, 1);
-        yPos += lineHeight;
-
-        float healthPercent = (float)bossPointer->health / bossPointer->maxHealth;
-
-        drawTextWithOutline(painter, 15, yPos,
-                            QString("Boss血量: %1 / %2").arg(bossPointer->health).arg(bossPointer->maxHealth),
-                            Qt::red, Qt::black, 1);
-        yPos += lineHeight;
-
-        QString phase;
-        if (healthPercent < 0.3f) {
-            phase = "濒死阶段 (疯狂模式)";
-        } else if (healthPercent < 0.6f) {
-            phase = "受伤阶段 (强化模式)";
-        } else {
-            phase = "正常阶段";
+    // 查找Boss状态
+    if (bossSpawned) {
+        MovingObject* boss = nullptr;
+        for (int i = 0; i < movingObjects.size(); i++) {
+            if (movingObjects[i].isBoss && movingObjects[i].objectId == bossId) {
+                boss = &movingObjects[i];
+                break;
+            }
         }
-        drawTextWithOutline(painter, 15, yPos, QString("Boss阶段: %1").arg(phase),
-                            QColor(255, 165, 0), Qt::black, 1);
 
+        if (boss != nullptr && !boss->isDead && boss->health > 0) {
+            drawTextWithOutline(painter, 15, yPos, "=== Boss状态 ===", Qt::red, Qt::black, 1);
+            yPos += lineHeight;
+
+            float healthPercent = (float)boss->health / boss->maxHealth;
+
+            drawTextWithOutline(painter, 15, yPos,
+                                QString("Boss血量: %1 / %2").arg(boss->health).arg(boss->maxHealth),
+                                Qt::red, Qt::black, 1);
+            yPos += lineHeight;
+
+            QString phase;
+            if (healthPercent < 0.3f) {
+                phase = "濒死阶段 (疯狂模式)";
+            } else if (healthPercent < 0.6f) {
+                phase = "受伤阶段 (强化模式)";
+            } else {
+                phase = "正常阶段";
+            }
+            drawTextWithOutline(painter, 15, yPos, QString("Boss阶段: %1").arg(phase),
+                                QColor(255, 165, 0), Qt::black, 1);
+            yPos += lineHeight;
+        }
     }
 
     painter.restore();
