@@ -239,8 +239,8 @@ void GameWindow::updateBoss()
 
     if (distanceToPlayer > 0) {
         float healthPercent = (float)boss->health / boss->maxHealth;
-        float baseSpeed = 3.0f;
-        float speedMultiplier = 1.0f + (1.0f - healthPercent) * 1.5f;
+        float baseSpeed = 1.0f;
+        float speedMultiplier =  1.0f+(1.0f - healthPercent) * 1.5f;
         float currentSpeed = baseSpeed * speedMultiplier;
 
         boss->speedX = (dx / distanceToPlayer) * currentSpeed;
@@ -502,7 +502,7 @@ void GameWindow::checkAndUpgradeAttack()
         int attackIncrease = 2;
         playerAttack += attackIncrease;
         killsForUpgrade += 2;
-        int healAmount = 50;
+        int healAmount = 200;
         playerHealth = qMin(playerHealth + healAmount, playerMaxHealth);
 
 
