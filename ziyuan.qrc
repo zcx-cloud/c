@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>cailiao/baima.png</file>
+        <file>cailiao/beijing.png</file>
+        <file>cailiao/boss.png</file>
+        <file>cailiao/guai.png</file>
+        <file>cailiao/lantern.png</file>
+    </qresource>
+</RCC>
