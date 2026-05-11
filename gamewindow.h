@@ -35,10 +35,11 @@ private:
         int maxHealth;
         bool isDead;
         bool isBoss;
+        int objectId;
 
         MovingObject() : x(0), y(0), size(0), speedX(0), speedY(0),
             imageIndex(-1), distance(0.0), health(100),
-            maxHealth(100), isDead(false), isBoss(false) {}
+            maxHealth(100), isDead(false), isBoss(false), objectId(0) {}
     };
 
 
@@ -53,6 +54,7 @@ private:
 
 
     void initGame();
+
 
     bool loadImages();
     void updateBackground();
@@ -79,9 +81,9 @@ private:
     void checkAndUpgradeAttack();
     void spawnBoss();
     void updateBoss();
-    void updateBullets();
     void bossShoot();
-    void checkVictory();
+    void updateBullets();
+
 
 
     void drawBackground(QPainter &painter);
@@ -112,12 +114,13 @@ private:
     int upgradeLevel;
     int attackBonus;
     int totalKills;
-
+    MovingObject* bossPointer;
 
     bool bossSpawned;
     float bossSpawnTimer;
     float bossSpawnDelay;
     int bossIndex;
+    int bossId;
     float bossShootTimer;
     float bossShootDelay;
     QVector<Bullet> bullets;
@@ -126,18 +129,16 @@ private:
 
     bool moveUp, moveDown, moveLeft, moveRight;
 
+
     bool showConnection;
     bool showHealthBars;
     float backgroundOpacity;
 
-private:
-
-
-    MovingObject* bossPointer;
 
     QVector<MovingObject> movingObjects;
     int nearestObjectIndex;
     double nearestDistance;
+    int nextObjectId;
 
 
     QPixmap backgroundPixmap;
